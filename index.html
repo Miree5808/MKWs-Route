@@ -3,96 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Route Note (Sheet Ver)</title>
+    <title>Game Route Note (Goal First)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
         body { font-family: sans-serif; background-color: #202124; color: #e8eaed; padding: 20px; max-width: 600px; margin: 0 auto; }
-        h1 { text-align: center; font-size: 1.5rem; }
-        .search-box { background: #303134; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 20px; }
+        
+        .search-box { background: #303134; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        /* 順番をわかりやすくするためにラベルに番号風の装飾 */
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #8ab4f8; }
-        select { width: 100%; padding: 10px; margin-bottom: 15px; background: #202124; color: white; border: 1px solid #5f6368; border-radius: 4px; }
-        #result-area { display: none; background: #3c4043; padding: 20px; border-radius: 8px; border-left: 5px solid #8ab4f8; }
+        .step-badge { background: #8ab4f8; color: #202124; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-size: 0.8em; }
+
+        select { width: 100%; padding: 12px; margin-bottom: 20px; background: #202124; color: white; border: 1px solid #5f6368; border-radius: 4px; font-size: 16px; }
+        select:disabled { background: #3c4043; color: #9aa0a6; cursor: not-allowed; }
+
+        #result-area { display: none; background: #3c4043; padding: 20px; border-radius: 8px; border-left: 5px solid #8ab4f8; animation: fadeIn 0.3s ease; }
+        .note-title { font-weight:bold; margin-bottom:10px; color: #8ab4f8; border-bottom: 1px solid #5f6368; padding-bottom: 5px;}
         .note-content { white-space: pre-wrap; line-height: 1.6; }
-        .loading { text-align: center; color: #fbbc04; }
+        
+        .loading { text-align: center; color: #fbbc04; margin-top: 50px;}
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <h1>🎮 ルート攻略（Sheet連動）</h1>
+    <h1>🎮 逆引きルート攻略</h1>
 
     <div id="loading-msg" class="loading">データ読み込み中...</div>
 
     <div class="search-box" id="main-ui" style="display:none;">
-        <label>START</label>
-        <select id="start-select" onchange="findRoute()"><option value="">選択してください</option></select>
-        <label>GOAL</label>
-        <select id="end-select" onchange="findRoute()"><option value="">選択してください</option></select>
+        
+        <label><span class="step-badge">1</span>GOAL（目的地）</label>
+        <select id="end-select" onchange="updateStartOptions()">
+            <option value="">選択してください</option>
+        </select>
+
+        <label><span class="step-badge">2</span>START（出発地）</label>
+        <select id="start-select" onchange="findRoute()" disabled>
+            <option value="">先にGOALを選んでください</option>
+        </select>
     </div>
 
     <div id="result-area">
-        <div style="font-weight:bold; margin-bottom:10px;">📝 攻略テクニック</div>
+        <div class="note-title">📝 攻略メモ</div>
         <div id="note-text" class="note-content"></div>
     </div>
 
     <script>
-        // ▼▼▼ ここに「ウェブに公開」で取得したCSVのURLを貼る ▼▼▼
+        // ▼▼▼ ここにスプレッドシートのURLを貼ってください ▼▼▼
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGCuHHt7237RMl1ib0ZCfhczvmp0Sz7oWoJ0QrBaZgYqpLBJjBgOgiKJGUBhJX9E-Jg3Hew1LKq4rZ/pub?output=csv"; 
         // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
         let routeData = [];
+        const startSelect = document.getElementById('start-select');
+        const endSelect = document.getElementById('end-select');
+        const resultArea = document.getElementById('result-area');
 
-        // ページ読み込み時にスプレッドシートを取得
+        // データ読み込み
         window.onload = function() {
             Papa.parse(SHEET_URL, {
                 download: true,
-                header: true, // 1行目をヘッダーとして扱う
+                header: true,
+                skipEmptyLines: true,
                 complete: function(results) {
                     routeData = results.data;
-                    initSelectBoxes();
+                    initGoalBox(); // ★まずはGOALリストを作る
                     document.getElementById('loading-msg').style.display = 'none';
                     document.getElementById('main-ui').style.display = 'block';
                 },
                 error: function(err) {
-                    alert("データの読み込みに失敗しました。URLを確認してください。");
+                    alert("読み込み失敗：URLを確認してください");
                 }
             });
         };
 
-        const startSelect = document.getElementById('start-select');
-        const endSelect = document.getElementById('end-select');
-
-        function initSelectBoxes() {
-            const allPoints = new Set();
-            routeData.forEach(d => {
-                if(d.start && d.end) { // 空行対策
-                    allPoints.add(d.start);
-                    allPoints.add(d.end);
-                }
-            });
-
-            allPoints.forEach(point => {
+        // 1. GOALの選択肢を作る関数
+        function initGoalBox() {
+            // Endの列にある重複しない名前だけを集める
+            const endPoints = new Set(routeData.map(d => d.end).filter(s => s));
+            
+            endPoints.forEach(point => {
                 const opt = document.createElement('option');
                 opt.value = opt.text = point;
-                startSelect.add(opt);
-                endSelect.add(opt.cloneNode(true));
+                endSelect.add(opt);
             });
         }
 
+        // 2. GOALが選ばれた時に動く関数（STARTの中身を書き換える）
+        function updateStartOptions() {
+            const selectedEnd = endSelect.value;
+            
+            // Startをリセット
+            startSelect.innerHTML = '<option value="">選択してください</option>';
+            startSelect.disabled = true;
+            resultArea.style.display = 'none';
+
+            if (!selectedEnd) return;
+
+            // データの中から「選ばれたGoal」へ向かう行だけを探す
+            // その行の「start」の値だけを集める
+            const validStarts = routeData
+                .filter(d => d.end === selectedEnd)
+                .map(d => d.start);
+
+            if (validStarts.length > 0) {
+                // 出発できる場所を追加
+                validStarts.forEach(start => {
+                    const opt = document.createElement('option');
+                    opt.value = opt.text = start;
+                    startSelect.add(opt);
+                });
+                startSelect.disabled = false; // 有効化
+            } else {
+                const opt = document.createElement('option');
+                opt.text = "到達ルートなし";
+                startSelect.add(opt);
+            }
+        }
+
+        // 3. STARTを選んだらメモを表示する関数
         function findRoute() {
             const sv = startSelect.value;
-            const ev = endSelect.value;
-            const resArea = document.getElementById('result-area');
+            const ev = endSelect.value; // Goalの値を取得
             
-            if (!sv || !ev) { resArea.style.display = 'none'; return; }
+            if (!sv || !ev) {
+                resultArea.style.display = 'none';
+                return;
+            }
 
-            // スプレッドシートの列名に合わせて検索 (start, end)
             const found = routeData.find(d => d.start === sv && d.end === ev);
             
             if (found) {
                 document.getElementById('note-text').textContent = found.note;
-                resArea.style.display = 'block';
-            } else {
-                resArea.style.display = 'none';
+                resultArea.style.display = 'block';
             }
         }
     </script>
