@@ -36,19 +36,19 @@
 
     <div class="search-box" id="main-ui" style="display:none;">
         
-        <label><span class="step-badge">1</span>START（出発地）</label>
+        <label><span class="step-badge">1</span>START</label>
         <select id="start-select" onchange="updateEndOptions()">
             <option value="">選択してください</option>
         </select>
 
-        <label><span class="step-badge">2</span>GOAL（目的地）</label>
+        <label><span class="step-badge">2</span>GOAL</label>
         <select id="end-select" onchange="findRoute()" disabled>
             <option value="">先にSTARTを選んでください</option>
         </select>
     </div>
 
     <div id="result-area">
-        <div class="note-title">📝 攻略メモ</div>
+        <div class="note-title">NOTE</div>
         <div id="note-text" class="note-content"></div>
     </div>
 
@@ -146,4 +146,5 @@
     </script>
 </body>
 </html>
+
 
