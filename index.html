@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MKW 道中ナビ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>MKW 道中ナビ</h1>
+            <button id="reset-btn" class="hidden">最初に戻る</button>
+        </header>
+
+        <section id="step-dest" class="step-section">
+            <h2>Q. 次のコース（終点）は？</h2>
+            <div id="dest-grid" class="button-grid"></div>
+        </section>
+
+        <section id="step-start" class="step-section hidden">
+            <h2>Q. どこから入る？</h2>
+            <div id="start-grid" class="button-grid"></div>
+        </section>
+
+        <section id="result-card" class="result-section hidden">
+            <div class="card-content">
+                <div id="strategy-badge" class="badge"></div>
+                <h1 id="result-headline"></h1>
+                <ul id="result-points"></ul>
+                <div class="citation">source: <span id="citation-source"></span></div>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
